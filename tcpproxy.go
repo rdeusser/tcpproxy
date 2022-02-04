@@ -60,6 +60,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -71,9 +72,10 @@ import (
 type Proxy struct {
 	configs map[string]*config // ip:port => config
 
-	lns   []net.Listener
-	donec chan struct{} // closed before err
-	err   error         // any error from listening
+	lns      []net.Listener
+	donec    chan struct{} // closed before err
+	doneOnce sync.Once
+	err      error // any error from listening
 
 	// ListenFunc optionally specifies an alternate listen
 	// function. If nil, net.Dial is used.
@@ -177,6 +179,7 @@ func (p *Proxy) Close() error {
 	for _, c := range p.lns {
 		c.Close()
 	}
+	p.closeDone()
 	return nil
 }
 
@@ -208,7 +211,7 @@ func (p *Proxy) Start() error {
 
 func (p *Proxy) awaitFirstError(errc <-chan error) {
 	p.err = <-errc
-	close(p.donec)
+	p.closeDone()
 }
 
 func (p *Proxy) serveListener(ret chan<- error, ln net.Listener, routes []route) {
@@ -244,6 +247,13 @@ func (p *Proxy) serveConn(c net.Conn, routes []route) bool {
 	log.Printf("tcpproxy: no routes matched conn %v/%v; closing", c.RemoteAddr().String(), c.LocalAddr().String())
 	c.Close()
 	return false
+}
+
+// closeDone closes the done channel and ensures that it's only ever done once.
+func (p *Proxy) closeDone() {
+	p.doneOnce.Do(func() {
+		close(p.donec)
+	})
 }
 
 // Conn is an incoming connection that has had some bytes read from it
