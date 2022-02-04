@@ -1,5 +1,5 @@
 # tcpproxy
 
-For library usage, see https://godoc.org/inet.af/tcpproxy/
+This is a fork of https://github.com/inetaf/tcpproxy stripped down and modified a bit to suit my needs.
 
-For CLI usage, see https://github.com/inetaf/tcpproxy/blob/master/cmd/tlsrouter/README.md
+For library usage, see https://godoc.org/rdeusser/tcpproxy/
